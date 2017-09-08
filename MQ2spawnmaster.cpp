@@ -1,21 +1,33 @@
 // MQ2SpawnMaster - Spawn tracking/analysis utility
 //
 // Commands:
-//    /spawnmaster - display usage information
+//    /spawnmaster - display usage information
 //
 // MQ2Data Variables
-//  bool   SpawnMaster - True if spawn monitoring is active.  NULL if plugin not loaded.
-//  Members:
-//    int   Search      - Number of search strings being monitored for the current zone
-//    int   UpList      - Number of matching spawns currently up
-//    int   DownList   - Number of matching spawns that have died or depopped
-//  string  LastMatch   - The name of the last spawn to match a search
+//  bool   SpawnMaster - True if spawn monitoring is active.  NULL if plugin not loaded.
+//  Members:
+//    int   Search      - Number of search strings being monitored for the current zone
+//    int   UpList      - Number of matching spawns currently up
+//    int   DownList   - Number of matching spawns that have died or depopped
+//  string  LastMatch   - The name of the last spawn to match a search
+//
+// Changes:
+//  11/02/2004
+//     Restructured initialization and zoning to utilize Cronic's new zoning callbacks
+//     New INI file handling.  Entries MUST start with spawn0 and count up sequentially
+//  10/27/2004
+//     changes to formatting and colors, thanks to Chill for suggestions
+//     added location of death/despawn to the struct
+//  10/23/2004
+//     initial "proof of concept" release
+//     some code borrowed from Digitalxero's SpawnAlert plugin
 //
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-//Version 11.0 by eqmule - Added sound support for mob spawning
+//24/04/2017 Version 11.0 by eqmule - Added sound support for mob spawning
+//22/06/2017 Version 11.1 by eqmule - Added settings per server.character
 
-#define SpawnMaster_Version   "24/04/2017"
+#define SpawnMaster_Version   "22/06/2017"
 #define PLUGIN_NAME "MQ2SpawnMaster"
 
 #include "../MQ2Plugin.h"
@@ -24,7 +36,7 @@
 #define   SKIP_PULSES   10
 
 PreSetup("MQ2SpawnMaster");
-PLUGIN_VERSION(11.0);
+PLUGIN_VERSION(11.1);
 
 FLOAT fMasterVolume = 1.0;
 struct _SEARCH_STRINGS {
@@ -338,7 +350,9 @@ template<unsigned int _Size>VOID AddSpawnToUpList(PSPAWNINFO pSpawn,char(&Sound)
 				peqs->fWaveVolumeLevel = fOrgVol;//better not mess with peoples mastervolume...
 			}
 		}
-        GetPrivateProfileString("Settings","OnSpawnCommand","notfound",szTemp,MAX_STRING,INIFileName);
+		CHAR szProfile[MAX_STRING] = { 0 };
+		sprintf_s(szProfile,"%s.%s",EQADDR_SERVERNAME,((PCHARINFO)pCharData)->Name);
+        GetPrivateProfileString(szProfile,"OnSpawnCommand","notfound",szTemp,MAX_STRING,INIFileName);
         if(!strcmp(szTemp,"notfound"))
 			return;
         DoCommand((PSPAWNINFO)pCharSpawn, szTemp);
@@ -433,17 +447,18 @@ VOID SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
 
     GetArg(Arg1,szLine,1);
     GetArg(Arg2,szLine,2);
-
+	CHAR szProfile[MAX_STRING] = { 0 };
+	sprintf_s(szProfile,"%s.%s",EQADDR_SERVERNAME,((PCHARINFO)pCharData)->Name);
     if (!_stricmp(Arg1,"off"))
     {
         bSpawnMasterOn = false;
-        WritePrivateProfileString("Settings","Enabled","off",INIFileName);
+        WritePrivateProfileString(szProfile,"Enabled","off",INIFileName);
         WriteChatf("\at%s\ax::\arDisabled",PLUGIN_NAME);
     }
     else if (!_stricmp(Arg1,"on"))
     {
         bSpawnMasterOn = true;
-        WritePrivateProfileString("Settings","Enabled","on",INIFileName);
+        WritePrivateProfileString(szProfile,"Enabled","on",INIFileName);
         WriteChatf("\at%s\ax::\agEnabled",PLUGIN_NAME);
 
     }
@@ -455,13 +470,13 @@ VOID SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
             bUseExactCase=true;
         else if(!_strnicmp(Arg2, "off", 3))
             bUseExactCase=false;
-        WritePrivateProfileString("Settings","ExactCase",bUseExactCase?"on":"off",INIFileName);
+        WritePrivateProfileString(szProfile,"ExactCase",bUseExactCase?"on":"off",INIFileName);
         WriteChatf("\at%s\ax::\amExactCast=%s",PLUGIN_NAME,bUseExactCase?"\agON":"\ayOFF");
     }
 	else if (!_stricmp(Arg1,"vol"))
     {
 		if (Arg2[0]!='\0') {
-			WritePrivateProfileString("Settings", "MasterVolume", Arg2, INIFileName);
+			WritePrivateProfileString(szProfile, "MasterVolume", Arg2, INIFileName);
 			WriteChatf("\at%s\ax::\amMasterVolume=%s", PLUGIN_NAME, Arg2);
 			fMasterVolume = (FLOAT)atof(Arg2);
 		} else {
@@ -602,14 +617,16 @@ PLUGIN_API VOID InitializePlugin(VOID)
         SpawnDownList.clear();
         SearchStrings.clear();
         ReadSpawnListFromINI();
-        GetPrivateProfileString("Settings","MasterVolume","1.0",szTemp,MAX_STRING,INIFileName);
+		CHAR szProfile[MAX_STRING] = { 0 };
+		sprintf_s(szProfile,"%s.%s",EQADDR_SERVERNAME,((PCHARINFO)pCharData)->Name);
+        GetPrivateProfileString(szProfile,"MasterVolume","1.0",szTemp,MAX_STRING,INIFileName);
 		fMasterVolume = (FLOAT)atof(szTemp);
-        GetPrivateProfileString("Settings","Enabled","on",szTemp,MAX_STRING,INIFileName);
+        GetPrivateProfileString(szProfile,"Enabled","on",szTemp,MAX_STRING,INIFileName);
         if (!_stricmp(szTemp,"on"))
             bSpawnMasterOn = true;
         else
             bSpawnMasterOn = false;
-        GetPrivateProfileString("Settings","ExactCase","off",szTemp,MAX_STRING,INIFileName);
+        GetPrivateProfileString(szProfile,"ExactCase","off",szTemp,MAX_STRING,INIFileName);
         if (!_stricmp(szTemp,"on"))
             bUseExactCase = true;
         else
@@ -667,7 +684,7 @@ PLUGIN_API VOID OnRemoveSpawn(PSPAWNINFO pSpawn)
 
     }
 }
-
+bool bMasterVolumeSet = false;
 // This is called every time the HUD is drawn
 PLUGIN_API VOID OnPulse(VOID)
 {
@@ -678,6 +695,16 @@ PLUGIN_API VOID OnPulse(VOID)
 
     //Check if any watched spawns have become corpses
     CheckForCorpse();
+	if (!bMasterVolumeSet) {
+		if (gGameState == GAMESTATE_INGAME) {
+			CHAR szTemp[MAX_STRING] = { 0 };
+			CHAR szProfile[MAX_STRING] = { 0 };
+			sprintf_s(szProfile,"%s.%s",EQADDR_SERVERNAME,((PCHARINFO)pCharData)->Name);
+			GetPrivateProfileString(szProfile,"MasterVolume","1.0",szTemp,MAX_STRING,INIFileName);
+			fMasterVolume = (FLOAT)atof(szTemp);
+			bMasterVolumeSet = true;
+		}
+	}
 }
 
 PLUGIN_API VOID OnBeginZone(VOID)
@@ -692,14 +719,16 @@ PLUGIN_API VOID OnEndZone(VOID)
     SpawnDownList.clear();
     SearchStrings.clear();
     ReadSpawnListFromINI();
-    GetPrivateProfileString("Settings","Enabled","on",szTemp,MAX_STRING,INIFileName);
+	CHAR szProfile[MAX_STRING] = { 0 };
+	sprintf_s(szProfile,"%s.%s",EQADDR_SERVERNAME,((PCHARINFO)pCharData)->Name);
+    GetPrivateProfileString(szProfile,"Enabled","on",szTemp,MAX_STRING,INIFileName);
     if (!_stricmp(szTemp,"on"))
     {
         bSpawnMasterOn = true;
         WalkSpawnList();
     }
     else bSpawnMasterOn = false;
-    GetPrivateProfileString("Settings","ExactCase","off",szTemp,MAX_STRING,INIFileName);
+    GetPrivateProfileString(szProfile,"ExactCase","off",szTemp,MAX_STRING,INIFileName);
     if (!_stricmp(szTemp,"on"))
         bUseExactCase = true;
     else
