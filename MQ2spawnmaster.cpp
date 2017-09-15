@@ -31,6 +31,7 @@
 #define PLUGIN_NAME "MQ2SpawnMaster"
 
 #include "../MQ2Plugin.h"
+using namespace std;
 #include <list>
 
 #define   SKIP_PULSES   10
