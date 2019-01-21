@@ -608,32 +608,45 @@ VOID SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
 PLUGIN_API VOID InitializePlugin(VOID)
 {
 	char szTemp[MAX_STRING] = { 0 };
-    AddCommand("/spawnmaster",SpawnMasterCmd);
-    AddMQ2Data("SpawnMaster",dataSpawnMaster);
-    pSpawnMasterType = new MQ2SpawnMasterType;
+	AddCommand("/spawnmaster", SpawnMasterCmd);
+	AddMQ2Data("SpawnMaster", dataSpawnMaster);
+	pSpawnMasterType = new MQ2SpawnMasterType;
 
-    if (gGameState==GAMESTATE_INGAME)
-    {
-        SpawnUpList.clear();
-        SpawnDownList.clear();
-        SearchStrings.clear();
-        ReadSpawnListFromINI();
+	if (gGameState == GAMESTATE_INGAME)
+	{
+		SpawnUpList.clear();
+		SpawnDownList.clear();
+		SearchStrings.clear();
+		ReadSpawnListFromINI();
 		CHAR szProfile[MAX_STRING] = { 0 };
-		sprintf_s(szProfile,"%s.%s",EQADDR_SERVERNAME,((PCHARINFO)pCharData)->Name);
-        GetPrivateProfileString(szProfile,"MasterVolume","1.0",szTemp,MAX_STRING,INIFileName);
+		sprintf_s(szProfile, "%s.%s", EQADDR_SERVERNAME, ((PCHARINFO)pCharData)->Name);
+		GetPrivateProfileString(szProfile, "MasterVolume", "1.0", szTemp, MAX_STRING, INIFileName);
 		fMasterVolume = (FLOAT)atof(szTemp);
-        GetPrivateProfileString(szProfile,"Enabled","on",szTemp,MAX_STRING,INIFileName);
-        if (!_stricmp(szTemp,"on"))
-            bSpawnMasterOn = true;
-        else
-            bSpawnMasterOn = false;
-        GetPrivateProfileString(szProfile,"ExactCase","off",szTemp,MAX_STRING,INIFileName);
-        if (!_stricmp(szTemp,"on"))
-            bUseExactCase = true;
-        else
-            bUseExactCase = false;
-    }
+		//Check for the INI Entry OnSpawnCommand to exist in [Server.CharName] and write a default value if not. 
+		GetPrivateProfileString(szProfile, "OnSpawnCommand", "notfound", szTemp, MAX_STRING, INIFileName);
+		if (!strcmp(szTemp, "notfound"))
+		WritePrivateProfileString(szProfile, "OnSpawnCommand", "", INIFileName);
+
+		//Check for the INI Entry Enabled to exist in [Server.CharName] and write a default value if not. 
+		GetPrivateProfileString(szProfile, "Enabled", "notfound", szTemp, MAX_STRING, INIFileName);
+		if (!strcmp(szTemp, "notfound"))
+		{
+			WritePrivateProfileString(szProfile, "Enabled", "on", INIFileName);
+			GetPrivateProfileString(szProfile, "Enabled", "on", szTemp, MAX_STRING, INIFileName);
+		}
+		if (!_stricmp(szTemp, "on"))
+			bSpawnMasterOn = true;
+		else
+			bSpawnMasterOn = false;
+
+		GetPrivateProfileString(szProfile, "ExactCase", "off", szTemp, MAX_STRING, INIFileName);
+		if (!_stricmp(szTemp, "on"))
+			bUseExactCase = true;
+		else
+			bUseExactCase = false;
+	}
 }
+
 
 PLUGIN_API VOID ShutdownPlugin(VOID)
 {
