@@ -496,7 +496,7 @@ void SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
         }
         else
         {
-            if(ppTarget && pTarget)
+            if(pTarget)
             {
                 PSPAWNINFO psTarget = (PSPAWNINFO)pTarget;
                 sprintf_s(szTemp,"#%s",psTarget->DisplayedName);
@@ -519,7 +519,7 @@ void SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
         }
         else
         {
-            if(ppTarget && pTarget)
+            if(pTarget)
             {
                 PSPAWNINFO psTarget = (PSPAWNINFO)pTarget;
                 sprintf_s(szTemp,"#%s",psTarget->DisplayedName);
