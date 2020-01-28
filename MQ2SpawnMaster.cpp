@@ -113,25 +113,25 @@ public:
         {
         case Search:
             Dest.Int=SearchStrings.size();
-            Dest.Type=pIntType;
+            Dest.Type=mq::datatypes::pIntType;
             return true;
         case UpList:
             Dest.Int=SpawnUpList.size();
-            Dest.Type=pIntType;
+            Dest.Type=mq::datatypes::pIntType;
             return true;
         case DownList:
             Dest.Int=SpawnDownList.size();
-            Dest.Type=pIntType;
+            Dest.Type=mq::datatypes::pIntType;
             return true;
         case Version:
             Dest.Double=MQ2Version;
-            Dest.Type=pDoubleType;
+            Dest.Type=mq::datatypes::pDoubleType;
             return true;
         case LastMatch:
             if (SpawnUpList.empty()) return false;
 			strcpy_s(DataTypeTemp, SpawnUpList.back().Name);
             Dest.Ptr=&DataTypeTemp[0];
-            Dest.Type=pStringType;
+            Dest.Type=mq::datatypes::pStringType;
             return true;
         }
         return false;
