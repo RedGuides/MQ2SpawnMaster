@@ -1,26 +1,26 @@
 // MQ2SpawnMaster - Spawn tracking/analysis utility
 //
 // Commands:
-//    /spawnmaster - display usage information
+//  /spawnmaster - display usage information
 //
 // MQ2Data Variables
-//  bool   SpawnMaster - True if spawn monitoring is active.  NULL if plugin not loaded.
-//  Members:
-//    int   Search      - Number of search strings being monitored for the current zone
-//    int   UpList      - Number of matching spawns currently up
-//    int   DownList   - Number of matching spawns that have died or depopped
-//  string  LastMatch   - The name of the last spawn to match a search
+//     bool SpawnMaster - True if spawn monitoring is active. NULL if plugin not loaded.
+// Members:
+//     int    Search      - Number of search strings being monitored for the current zone
+//     int    UpList      - Number of matching spawns currently up
+//     int    DownList    - Number of matching spawns that have died or depopped
+//     string LastMatch   - The name of the last spawn to match a search
 //
 // Changes:
-//  11/02/2004
-//     Restructured initialization and zoning to utilize Cronic's new zoning callbacks
-//     New INI file handling.  Entries MUST start with spawn0 and count up sequentially
-//  10/27/2004
-//     changes to formatting and colors, thanks to Chill for suggestions
-//     added location of death/despawn to the struct
-//  10/23/2004
-//     initial "proof of concept" release
-//     some code borrowed from Digitalxero's SpawnAlert plugin
+// 11/02/2004
+//  Restructured initialization and zoning to utilize Cronic's new zoning callbacks
+//  New INI file handling.  Entries MUST start with spawn0 and count up sequentially
+// 10/27/2004
+//  changes to formatting and colors, thanks to Chill for suggestions
+//  added location of death/despawn to the struct
+// 10/23/2004
+//  initial "proof of concept" release
+//  some code borrowed from Digitalxero's SpawnAlert plugin
 //
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -315,7 +315,7 @@ template<unsigned int _Size>BOOL IsWatchedSpawn(PSPAWNINFO pSpawn,char(&Sound)[_
 }
 template<unsigned int _Size>VOID AddSpawnToUpList(PSPAWNINFO pSpawn,char(&Sound)[_Size])
 {
-    //Dont add the spawn if its already a corpse
+    // Don't add the spawn if its already a corpse
     if (pSpawn->Type!=SPAWN_CORPSE)
     {
         CHAR szTemp[MAX_STRING] = {0};
@@ -336,16 +336,16 @@ template<unsigned int _Size>VOID AddSpawnToUpList(PSPAWNINFO pSpawn,char(&Sound)
 
         SpawnUpList.push_back(UpListTemp);
 
-        //Send alert to chat window
+        // Send alert to chat window
 
         INT Angle = (INT)((atan2f(GetCharInfo()->pSpawn->X - pSpawn->X, GetCharInfo()->pSpawn->Y - pSpawn->Y) * 180.0f / PI + 360.0f) / 22.5f + 0.5f) % 16;
         WriteChatf("\at%s\ax::\aySPAWN\am[%s] (%d) %s (%1.2f %s, %1.2fZ)", PLUGIN_NAME, UpListTemp.SpawnTime, UpListTemp.SpawnID, UpListTemp.Name,
             GetDistance(GetCharInfo()->pSpawn,pSpawn), szHeadingShort[Angle], pSpawn->Z-GetCharInfo()->pSpawn->Z);
 
-        //Do a /highlight command for the map
+        // Do a /highlight command for the map
         sprintf_s(szTemp, "/squelch /highlight \"%s\"", pSpawn->DisplayedName);
         DoCommand((PSPAWNINFO)pCharSpawn, szTemp);
-        //play sound, this can play any mp3 file from the \Voice\Default dir (in the eq dir)
+        // play sound, this can play any mp3 file from the \Voice\Default dir (in the eq dir)
 		if (Sound[0] != '\0') {
 			if (EqSoundManager*peqs = pEqSoundManager) {
 				float fOrgVol = peqs->fWaveVolumeLevel;
@@ -370,11 +370,11 @@ void WalkSpawnList()
     CHAR szCommand[MAX_STRING] = {0};
     CHAR szSound[MAX_STRING] = {0};
 
-    //Reset the hightlighting, incase weve removed a spawn
+    // Reset the hightlighting, incase weve removed a spawn
     strcpy_s(szCommand, "/squelch /highlight reset");
     DoCommand((PSPAWNINFO)pCharSpawn, szCommand);
 
-    //Make fresh list from current spawns.
+    // Make fresh list from current spawns.
     PSPAWNINFO pSpawn=(PSPAWNINFO)pSpawnList;
 
     WriteChatf("\at%s\ax::\aoSpawns currently up:",PLUGIN_NAME);
@@ -417,7 +417,7 @@ void CheckForCorpse()
     PSPAWNINFO pSpawnTemp = nullptr;
     if (SpawnUpList.empty()) return;
     std::list<SPAWN_DATA>::iterator pSpawnUpList = SpawnUpList.begin();
-    //For each node in list, check it to see if its a corpse
+    // For each node in list, check it to see if its a corpse
 
     while (pSpawnUpList != SpawnUpList.end())
     {
@@ -626,12 +626,12 @@ PLUGIN_API VOID InitializePlugin(VOID)
 		sprintf_s(szProfile, "%s.%s", EQADDR_SERVERNAME, ((PCHARINFO)pCharData)->Name);
 		GetPrivateProfileString(szProfile, "MasterVolume", "1.0", szTemp, MAX_STRING, INIFileName);
 		fMasterVolume = GetFloatFromString(szTemp, fMasterVolume);
-		//Check for the INI Entry OnSpawnCommand to exist in [Server.CharName] and write a default value if not. 
+		// Check for the INI Entry OnSpawnCommand to exist in [Server.CharName] and write a default value if not. 
 		GetPrivateProfileString(szProfile, "OnSpawnCommand", "notfound", szTemp, MAX_STRING, INIFileName);
 		if (!strcmp(szTemp, "notfound"))
 		WritePrivateProfileString(szProfile, "OnSpawnCommand", "", INIFileName);
 
-		//Check for the INI Entry Enabled to exist in [Server.CharName] and write a default value if not. 
+		// Check for the INI Entry Enabled to exist in [Server.CharName] and write a default value if not. 
 		GetPrivateProfileString(szProfile, "Enabled", "notfound", szTemp, MAX_STRING, INIFileName);
 		if (!strcmp(szTemp, "notfound"))
 		{
@@ -710,7 +710,7 @@ PLUGIN_API VOID OnPulse()
 		return;
     pulse_counter=0;
 
-    //Check if any watched spawns have become corpses
+    // Check if any watched spawns have become corpses
     CheckForCorpse();
 	if (!bMasterVolumeSet) {
 		if (gGameState == GAMESTATE_INGAME) {
