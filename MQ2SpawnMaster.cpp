@@ -209,7 +209,7 @@ void WriteINI()
     if(GetCharInfo()->zoneId > MAX_ZONES)
         return;
 
-    PWORLDDATA psWorldData = ((PWORLDDATA)pWorldData);
+    EQWorldData* psWorldData = pWorldData;
     CHAR ZoneName[MAX_STRING] = {0};
     strcpy_s(ZoneName,psWorldData->ZoneArray[GetCharInfo()->zoneId]->LongName);
 
@@ -241,7 +241,7 @@ void ReadSpawnListFromINI()
     CHAR szTemp[MAX_STRING];
     CHAR szBuffer[MAX_STRING];
     CHAR szSound[MAX_STRING];
-    PWORLDDATA psWorldData = ((PWORLDDATA)pWorldData);
+    EQWorldData* psWorldData = pWorldData;
 
     strcpy_s(ZoneName,psWorldData->ZoneArray[GetCharInfo()->zoneId]->LongName);
     //WriteChatf("\at%s\ax::\am%s", PLUGIN_NAME, ZoneName);
@@ -328,11 +328,11 @@ template<unsigned int _Size>VOID AddSpawnToUpList(PSPAWNINFO pSpawn,char(&Sound)
         UpListTemp.LastX=pSpawn->X;
         UpListTemp.LastY=pSpawn->Y;
         UpListTemp.LastZ=pSpawn->Z;
-        UpListTemp.SpawnGameTime.Hour=((PWORLDDATA)pWorldData)->Hour;
-        UpListTemp.SpawnGameTime.Minute=((PWORLDDATA)pWorldData)->Minute;
-        UpListTemp.SpawnGameTime.Day=((PWORLDDATA)pWorldData)->Day;
-        UpListTemp.SpawnGameTime.Month=((PWORLDDATA)pWorldData)->Month;
-        UpListTemp.SpawnGameTime.Year=((PWORLDDATA)pWorldData)->Year;
+        UpListTemp.SpawnGameTime.Hour=pWorldData->Hour;
+        UpListTemp.SpawnGameTime.Minute=pWorldData->Minute;
+        UpListTemp.SpawnGameTime.Day=pWorldData->Day;
+        UpListTemp.SpawnGameTime.Month=pWorldData->Month;
+        UpListTemp.SpawnGameTime.Year=pWorldData->Year;
 
         SpawnUpList.push_back(UpListTemp);
 
@@ -427,10 +427,10 @@ void CheckForCorpse()
             GetLocalTimeHHMMSS(LocalTime);
             WriteChatf("\at%s\ax::\ar*[%s]\ax Spawn Killed: %s (%d) at %s", PLUGIN_NAME, LocalTime, pSpawn->DisplayedName, pSpawn->SpawnID);
             strcpy_s(pSpawnUpList->DeSpawnTime,LocalTime);
-            pSpawnUpList->DeSpawnGameTime.Minute=((PWORLDDATA)pWorldData)->Minute;
-            pSpawnUpList->DeSpawnGameTime.Day=((PWORLDDATA)pWorldData)->Day;
-            pSpawnUpList->DeSpawnGameTime.Month=((PWORLDDATA)pWorldData)->Month;
-            pSpawnUpList->DeSpawnGameTime.Year=((PWORLDDATA)pWorldData)->Year;
+            pSpawnUpList->DeSpawnGameTime.Minute=pWorldData->Minute;
+            pSpawnUpList->DeSpawnGameTime.Day=pWorldData->Day;
+            pSpawnUpList->DeSpawnGameTime.Month=pWorldData->Month;
+            pSpawnUpList->DeSpawnGameTime.Year=pWorldData->Year;
             pSpawnUpList->LastX=pSpawn->X;
             pSpawnUpList->LastY=pSpawn->Y;
             pSpawnUpList->LastZ=pSpawn->Z;
@@ -684,10 +684,10 @@ PLUGIN_API VOID OnRemoveSpawn(PSPAWNINFO pSpawn)
             if (pSpawnUpList->SpawnID==pSpawn->SpawnID)
             {
                 GetLocalTimeHHMMSS(pSpawnUpList->DeSpawnTime);
-                pSpawnUpList->DeSpawnGameTime.Minute=((PWORLDDATA)pWorldData)->Minute;
-                pSpawnUpList->DeSpawnGameTime.Day=((PWORLDDATA)pWorldData)->Day;
-                pSpawnUpList->DeSpawnGameTime.Month=((PWORLDDATA)pWorldData)->Month;
-                pSpawnUpList->DeSpawnGameTime.Year=((PWORLDDATA)pWorldData)->Year;
+                pSpawnUpList->DeSpawnGameTime.Minute=pWorldData->Minute;
+                pSpawnUpList->DeSpawnGameTime.Day=pWorldData->Day;
+                pSpawnUpList->DeSpawnGameTime.Month=pWorldData->Month;
+                pSpawnUpList->DeSpawnGameTime.Year=pWorldData->Year;
                 pSpawnUpList->LastX=pSpawn->X;
                 pSpawnUpList->LastY=pSpawn->Y;
                 pSpawnUpList->LastZ=pSpawn->Z;
