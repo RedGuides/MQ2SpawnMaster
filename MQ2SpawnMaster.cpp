@@ -104,7 +104,7 @@ public:
     {
     }
 
-    bool GetMember(MQVarPtr VarPtr, PCHAR Member, PCHAR Index, MQTypeVar& Dest)
+    virtual bool GetMember(MQVarPtr VarPtr, const char* Member, char* Index, MQTypeVar& Dest) override
     {
         MQTypeMember* pMember=MQ2SpawnMasterType::FindMember(Member);
         if (!pMember)
@@ -150,7 +150,7 @@ public:
     {
         return false;
     }
-    bool FromString(MQVarPtr& VarPtr, char* Source)
+    virtual bool FromString(MQVarPtr& VarPtr, const char* Source) override
     {
         return false;
     }
