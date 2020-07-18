@@ -32,7 +32,7 @@
 #include <list>
 
 constexpr auto PLUGIN_NAME = "MQ2SpawnMaster";
-PLUGIN_VERSION(11.1);
+PLUGIN_VERSION(11.2);
 
 PreSetup(PLUGIN_NAME);
 
@@ -75,93 +75,6 @@ std::list<SPAWN_DATA> SpawnDownList;
 
 bool bSpawnMasterOn = false;
 bool bUseExactCase = false;
-
-PLUGIN_API VOID OnEndZone();
-
-class MQ2SpawnMasterType *pSpawnMasterType = nullptr;
-
-class MQ2SpawnMasterType : public MQ2Type
-{
-public:
-    enum SpawnMasterMembers
-    {
-        Search=1,
-        UpList=2,
-        DownList=3,
-        Version=4,
-        LastMatch=5,
-    };
-
-    MQ2SpawnMasterType():MQ2Type("SpawnMaster")
-    {
-        TypeMember(Search);
-        TypeMember(UpList);
-        TypeMember(DownList);
-        TypeMember(Version);
-        TypeMember(LastMatch);
-    }
-    ~MQ2SpawnMasterType()
-    {
-    }
-
-    virtual bool GetMember(MQVarPtr VarPtr, const char* Member, char* Index, MQTypeVar& Dest) override
-    {
-        MQTypeMember* pMember=MQ2SpawnMasterType::FindMember(Member);
-        if (!pMember)
-            return false;
-        switch((SpawnMasterMembers)pMember->ID)
-        {
-        case Search:
-            Dest.Int=SearchStrings.size();
-            Dest.Type=mq::datatypes::pIntType;
-            return true;
-        case UpList:
-            Dest.Int=SpawnUpList.size();
-            Dest.Type=mq::datatypes::pIntType;
-            return true;
-        case DownList:
-            Dest.Int=SpawnDownList.size();
-            Dest.Type=mq::datatypes::pIntType;
-            return true;
-        case Version:
-            Dest.Double=MQ2Version;
-            Dest.Type=mq::datatypes::pDoubleType;
-            return true;
-        case LastMatch:
-            if (SpawnUpList.empty()) return false;
-			strcpy_s(DataTypeTemp, SpawnUpList.back().Name);
-            Dest.Ptr=&DataTypeTemp[0];
-            Dest.Type=mq::datatypes::pStringType;
-            return true;
-        }
-        return false;
-    }
-
-    bool ToString(MQVarPtr VarPtr, char* Destination)
-    {
-        if (bSpawnMasterOn)
-            strcpy_s(Destination,MAX_STRING,"TRUE");
-        else
-            strcpy_s(Destination,MAX_STRING,"FALSE");
-        return true;
-    }
-
-    bool FromData(MQVarPtr& VarPtr, MQTypeVar& Source)
-    {
-        return false;
-    }
-    virtual bool FromString(MQVarPtr& VarPtr, const char* Source) override
-    {
-        return false;
-    }
-};
-
-bool dataSpawnMaster(const char* szName, MQTypeVar& Dest)
-{
-    Dest.DWord=1;
-    Dest.Type=pSpawnMasterType;
-    return true;
-}
 
 // TODO:  Replace with the built-in methods
 // case-insensitive string search, the first argument is the string
@@ -286,6 +199,7 @@ template <unsigned int _Size>VOID GetLocalTimeHHMMSS(CHAR(&SysTime)[_Size])
     sprintf_s(SysTime, "%2d:%02d:%02d", Hour, st.wMinute, st.wSecond );
 }
 
+// TODO:  Why is Sound required to determine if something is a watched spawn?
 template<unsigned int _Size>BOOL IsWatchedSpawn(PSPAWNINFO pSpawn,char(&Sound)[_Size])
 {
     if (pSpawn->Type==SPAWN_CORPSE)
@@ -313,6 +227,7 @@ template<unsigned int _Size>BOOL IsWatchedSpawn(PSPAWNINFO pSpawn,char(&Sound)[_
     }
     return false;
 }
+
 template<unsigned int _Size>VOID AddSpawnToUpList(PSPAWNINFO pSpawn,char(&Sound)[_Size])
 {
     // Don't add the spawn if its already a corpse
@@ -609,7 +524,101 @@ void SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
     }
 }
 
-PLUGIN_API VOID InitializePlugin(VOID)
+class MQ2SpawnMasterType *pSpawnMasterType = nullptr;
+
+class MQ2SpawnMasterType : public MQ2Type
+{
+public:
+    enum SpawnMasterMembers
+    {
+        Search,
+        UpList,
+        DownList,
+        Version,
+        LastMatch,
+        HasTarget
+    };
+
+    MQ2SpawnMasterType():MQ2Type("SpawnMaster")
+    {
+        TypeMember(Search);
+        TypeMember(UpList);
+        TypeMember(DownList);
+        TypeMember(Version);
+        TypeMember(LastMatch);
+        TypeMember(HasTarget);
+    }
+    ~MQ2SpawnMasterType()
+    {
+    }
+
+    virtual bool GetMember(MQVarPtr VarPtr, const char* Member, char* Index, MQTypeVar& Dest) override
+    {
+        MQTypeMember* pMember=MQ2SpawnMasterType::FindMember(Member);
+        if (!pMember)
+            return false;
+        switch((SpawnMasterMembers)pMember->ID)
+        {
+        case Search:
+            Dest.Int=SearchStrings.size();
+            Dest.Type=mq::datatypes::pIntType;
+            return true;
+        case UpList:
+            Dest.Int=SpawnUpList.size();
+            Dest.Type=mq::datatypes::pIntType;
+            return true;
+        case DownList:
+            Dest.Int=SpawnDownList.size();
+            Dest.Type=mq::datatypes::pIntType;
+            return true;
+        case Version:
+            Dest.Double=MQ2Version;
+            Dest.Type=mq::datatypes::pDoubleType;
+            return true;
+        case LastMatch:
+            if (SpawnUpList.empty()) return false;
+			strcpy_s(DataTypeTemp, SpawnUpList.back().Name);
+            Dest.Ptr=&DataTypeTemp[0];
+            Dest.Type=mq::datatypes::pStringType;
+            return true;
+        case HasTarget:
+            if (SpawnUpList.empty()) return false;
+            if (pTarget == nullptr) return false;
+            Dest.Type=mq::datatypes::pBoolType;
+            // FIXME:  Don't really want to pass a sound here
+            Dest.Int=IsWatchedSpawn(pTarget, DataTypeTemp);
+            return true;
+        }
+        return false;
+    }
+
+    bool ToString(MQVarPtr VarPtr, char* Destination)
+    {
+        if (bSpawnMasterOn)
+            strcpy_s(Destination,MAX_STRING,"TRUE");
+        else
+            strcpy_s(Destination,MAX_STRING,"FALSE");
+        return true;
+    }
+
+    bool FromData(MQVarPtr& VarPtr, MQTypeVar& Source)
+    {
+        return false;
+    }
+    virtual bool FromString(MQVarPtr& VarPtr, const char* Source) override
+    {
+        return false;
+    }
+};
+
+bool dataSpawnMaster(const char* szName, MQTypeVar& Dest)
+{
+    Dest.DWord=1;
+    Dest.Type=pSpawnMasterType;
+    return true;
+}
+
+PLUGIN_API void InitializePlugin()
 {
 	char szTemp[MAX_STRING] = { 0 };
 	AddCommand("/spawnmaster", SpawnMasterCmd);
@@ -652,14 +661,14 @@ PLUGIN_API VOID InitializePlugin(VOID)
 }
 
 
-PLUGIN_API VOID ShutdownPlugin(VOID)
+PLUGIN_API void ShutdownPlugin()
 {
     RemoveCommand("/spawnmaster");
     RemoveMQ2Data("SpawnMaster");
     delete pSpawnMasterType;
 }
 
-PLUGIN_API VOID OnAddSpawn(PSPAWNINFO pSpawn)
+PLUGIN_API void OnAddSpawn(PSPAWNINFO pSpawn)
 {
     if (!bSpawnMasterOn || gGameState != GAMESTATE_INGAME || !pSpawn->SpawnID)
 		return;
@@ -669,7 +678,7 @@ PLUGIN_API VOID OnAddSpawn(PSPAWNINFO pSpawn)
 	}
 }
 
-PLUGIN_API VOID OnRemoveSpawn(PSPAWNINFO pSpawn)
+PLUGIN_API void OnRemoveSpawn(PSPAWNINFO pSpawn)
 {
     if (!bSpawnMasterOn || gGameState != GAMESTATE_INGAME || !pSpawn->SpawnID)
 		return;
