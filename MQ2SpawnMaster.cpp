@@ -548,9 +548,6 @@ public:
         TypeMember(LastMatch);
         TypeMember(HasTarget);
     }
-    ~MQ2SpawnMasterType()
-    {
-    }
 
     virtual bool GetMember(MQVarPtr VarPtr, const char* Member, char* Index, MQTypeVar& Dest) override
     {
@@ -592,22 +589,13 @@ public:
         return false;
     }
 
-    bool ToString(MQVarPtr VarPtr, char* Destination)
+    bool ToString(MQVarPtr VarPtr, char* Destination) override
     {
         if (bSpawnMasterOn)
             strcpy_s(Destination,MAX_STRING,"TRUE");
         else
             strcpy_s(Destination,MAX_STRING,"FALSE");
         return true;
-    }
-
-    bool FromData(MQVarPtr& VarPtr, MQTypeVar& Source)
-    {
-        return false;
-    }
-    virtual bool FromString(MQVarPtr& VarPtr, const char* Source) override
-    {
-        return false;
     }
 };
 
