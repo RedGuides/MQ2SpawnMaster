@@ -337,7 +337,7 @@ void CheckForCorpse()
     while (pSpawnUpList != SpawnUpList.end())
     {
         PSPAWNINFO pSpawn = (PSPAWNINFO)GetSpawnByID(pSpawnUpList->SpawnID);
-        if((pSpawn) && pSpawn->Type==SPAWN_CORPSE) {
+        if(pSpawn && pSpawn->Type==SPAWN_CORPSE) {
             CHAR LocalTime[MAX_STRING];
             GetLocalTimeHHMMSS(LocalTime);
             WriteChatf("\at%s\ax::\ar*[%s]\ax Spawn Killed: %s (%d) at %s", PLUGIN_NAME, LocalTime, pSpawn->DisplayedName, pSpawn->SpawnID);
@@ -623,12 +623,12 @@ PLUGIN_API void InitializePlugin()
 		sprintf_s(szProfile, "%s.%s", EQADDR_SERVERNAME, ((PCHARINFO)pCharData)->Name);
 		GetPrivateProfileString(szProfile, "MasterVolume", "1.0", szTemp, MAX_STRING, INIFileName);
 		fMasterVolume = GetFloatFromString(szTemp, fMasterVolume);
-		// Check for the INI Entry OnSpawnCommand to exist in [Server.CharName] and write a default value if not. 
+		// Check for the INI Entry OnSpawnCommand to exist in [Server.CharName] and write a default value if not.
 		GetPrivateProfileString(szProfile, "OnSpawnCommand", "notfound", szTemp, MAX_STRING, INIFileName);
 		if (!strcmp(szTemp, "notfound"))
 		WritePrivateProfileString(szProfile, "OnSpawnCommand", "", INIFileName);
 
-		// Check for the INI Entry Enabled to exist in [Server.CharName] and write a default value if not. 
+		// Check for the INI Entry Enabled to exist in [Server.CharName] and write a default value if not.
 		GetPrivateProfileString(szProfile, "Enabled", "notfound", szTemp, MAX_STRING, INIFileName);
 		if (!strcmp(szTemp, "notfound"))
 		{
