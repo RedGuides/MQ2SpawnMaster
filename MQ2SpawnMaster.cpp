@@ -32,7 +32,7 @@
 #include <list>
 
 constexpr auto PLUGIN_NAME = "MQ2SpawnMaster";
-PLUGIN_VERSION(11.2);
+PLUGIN_VERSION(11.3);
 
 PreSetup(PLUGIN_NAME);
 
@@ -336,11 +336,11 @@ void CheckForCorpse()
 
     while (pSpawnUpList != SpawnUpList.end())
     {
-        PSPAWNINFO pSpawn = (PSPAWNINFO)GetSpawnByID(pSpawnUpList->SpawnID);
+        PlayerClient* pSpawn = GetSpawnByID(pSpawnUpList->SpawnID);
         if(pSpawn && pSpawn->Type==SPAWN_CORPSE) {
-            CHAR LocalTime[MAX_STRING];
+            char LocalTime[MAX_STRING];
             GetLocalTimeHHMMSS(LocalTime);
-            WriteChatf("\at%s\ax::\ar*[%s]\ax Spawn Killed: %s (%d) at %s", PLUGIN_NAME, LocalTime, pSpawn->DisplayedName, pSpawn->SpawnID);
+            WriteChatf("\at%s\ax::\ar*[%s]\ax Spawn Killed: %s (%d)", PLUGIN_NAME, LocalTime, pSpawn->DisplayedName, pSpawn->SpawnID);
             strcpy_s(pSpawnUpList->DeSpawnTime,LocalTime);
             pSpawnUpList->DeSpawnGameTime.Minute=pWorldData->Minute;
             pSpawnUpList->DeSpawnGameTime.Day=pWorldData->Day;
@@ -353,7 +353,7 @@ void CheckForCorpse()
             SpawnDownList.splice(SpawnDownList.end(),SpawnUpList,pSpawnUpList);
             return;
         }
-        else pSpawnUpList++;
+        ++pSpawnUpList;
     }
 }
 
