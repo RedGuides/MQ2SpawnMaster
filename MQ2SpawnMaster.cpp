@@ -32,7 +32,7 @@
 #include <list>
 
 constexpr auto PLUGIN_NAME = "MQ2SpawnMaster";
-PLUGIN_VERSION(11.3);
+PLUGIN_VERSION(11.4);
 
 PreSetup(PLUGIN_NAME);
 
@@ -40,6 +40,8 @@ constexpr auto SKIP_PULSES = 10;
 
 float fMasterVolume = 1.0;
 bool bMasterVolumeSet = false;
+
+std::string gOnSpawnCommand = "";
 
 struct _SEARCH_STRINGS {
 	CHAR SearchString[MAX_STRING];
@@ -74,103 +76,109 @@ std::list<SPAWN_DATA> SpawnUpList;
 std::list<SPAWN_DATA> SpawnDownList;
 
 bool bSpawnMasterOn = false;
-bool bUseExactCase = false;
 
-// TODO:  Replace with the built-in methods
-// case-insensitive string search, the first argument is the string
-// to be searched, the second is the string to search for
-bool StringCompare(PCHAR string, PCHAR strSearch)
+// Returns true if the name was added, false if not
+bool AddNameToSearchList(std::string spawnName, std::string soundName = "")
 {
-	CHAR szTemp1[MAX_STRING];
-	CHAR szTemp2[MAX_STRING];
-	strcpy_s(szTemp1,string);
-	strcpy_s(szTemp2,strSearch);
-	if(!bUseExactCase) {
-		_strlwr_s(szTemp1);
-		_strlwr_s(szTemp2);
-	}
-	return strstr(szTemp1,szTemp2)?true:false;
-}
-
-void AddNameToSearchList(PCHAR SpawnName)
-{
-	CHAR szSound[MAX_STRING] = { 0 };
-	if (char*pDest = strchr(SpawnName, '|')) {
-		pDest[0] = '\0';
-		strcpy_s(szSound, &pDest[1]);
-	}
 	std::list<_SEARCH_STRINGS>::iterator pSearchStrings = SearchStrings.begin();
-	while (pSearchStrings!=SearchStrings.end())
+	while (pSearchStrings != SearchStrings.end())
 	{
-		if (!strcmp(SpawnName,pSearchStrings->SearchString))
+		if (ci_equals(spawnName, pSearchStrings->SearchString))
 		{
-			WriteChatf("\at%s\ax::\aoAlready watching for \"\ay%s\ao\"", PLUGIN_NAME, SpawnName);
-			return;
+			WriteChatf("\at%s\ax::\aoAlready watching for \"\ay%s\ao\"", PLUGIN_NAME, spawnName.c_str());
+			return false;
 		}
-		pSearchStrings++;
+		++pSearchStrings;
 	}
 	_SEARCH_STRINGS NewString;
-	strcpy_s(NewString.SearchString,SpawnName);
-	strcpy_s(NewString.SearchSound,szSound);
+	strcpy_s(NewString.SearchString, MAX_STRING, spawnName.c_str());
+	strcpy_s(NewString.SearchSound, MAX_STRING, soundName.c_str());
 	SearchStrings.push_back(NewString);
-	WriteChatf("\at%s\ax::\aoNow watching for \"\ag%s\ao\"", PLUGIN_NAME, SpawnName);
+	WriteChatf("\at%s\ax::\aoNow watching for \"\ag%s\ao\"", PLUGIN_NAME, spawnName.c_str());
+	return true;
 }
 
-void WriteINI()
+std::string GetZoneSectionName(int zoneId)
 {
-	CHAR szTemp[MAX_STRING];
-	if(GetCharInfo()->zoneId > MAX_ZONES)
-		return;
-
-	EQWorldData* psWorldData = pWorldData;
-	CHAR ZoneName[MAX_STRING] = {0};
-	strcpy_s(ZoneName,psWorldData->ZoneArray[GetCharInfo()->zoneId]->LongName);
-
-	// clear the INI section
-	WritePrivateProfileString(ZoneName,NULL,NULL,INIFileName);
-	if (SearchStrings.empty()) return;
-	std::list<_SEARCH_STRINGS>::iterator pSearchStrings = SearchStrings.begin();
-	int i=0;
-	while (pSearchStrings!=SearchStrings.end())
+	std::string ZoneLongName = GetFullZone(zoneId);
+	std::string ZoneShortName = GetShortZone(zoneId);
+	char szTemp[10] = { 0 };
+	// If the zone short name doesn't exist but the long name does
+	if (GetPrivateProfileSection(ZoneShortName.c_str(), szTemp, 10, INIFileName) == 0 && GetPrivateProfileSection(ZoneLongName.c_str(), szTemp, 10, INIFileName) > 0)
 	{
-		sprintf_s(szTemp,"Spawn%d",i);
-		WritePrivateProfileString(ZoneName,szTemp,pSearchStrings->SearchString,INIFileName);
-		if (pSearchStrings->SearchSound[0] != '\0') {
-			sprintf_s(szTemp,"Sound%d",i);
-			WritePrivateProfileString(ZoneName,szTemp,pSearchStrings->SearchSound,INIFileName);
+		return ZoneLongName;
+	}
+	return ZoneShortName;
+}
+
+void AddSpawnToINI(std::string SpawnName)
+{
+	if (!pLocalPC || pLocalPC->zoneId > MAX_ZONES)
+	{
+		WriteChatf("\at%s\ax::\aoNo zone information available to add \"\ag%s\ao\" to ini", PLUGIN_NAME, SpawnName.c_str());
+		return;
+	}
+
+	const std::string zoneName = GetZoneSectionName(pLocalPC->zoneId);
+
+	// Find the first available slot capping at 2000 which was randomly chosen
+	for (int i=1; i < 2000; ++i)
+	{
+		std::string keyName = "Spawn" + std::to_string(i);
+		if (GetPrivateProfileString(zoneName, keyName, "", INIFileName).empty())
+		{
+			WritePrivateProfileString(zoneName, keyName, SpawnName, INIFileName);
+			break;
 		}
-		i++;
-		pSearchStrings++;
 	}
 }
 
-// FIXME: MAX_STRING everywhere
+void RemoveSpawnFromINI(std::string SpawnName)
+{
+	if (!pLocalPC || pLocalPC->zoneId > MAX_ZONES)
+	{
+		WriteChatf("\at%s\ax::\aoNo zone information available to remove \"\ag%s\ao\" from ini", PLUGIN_NAME, SpawnName.c_str());
+		return;
+	}
+
+	const std::string sectionName = GetZoneSectionName(pLocalPC->zoneId);
+
+	std::vector iniKeys = GetPrivateProfileKeys(sectionName, INIFileName);
+	// Find the first instance of the name only
+	for (const auto& iniKey : iniKeys)
+	{
+		std::string spawnName = GetPrivateProfileString(sectionName, iniKey, "", INIFileName);
+		if (ci_equals(spawnName, SpawnName))
+		{
+			DeletePrivateProfileKey(sectionName, iniKey, INIFileName);
+			break;
+		}
+	}
+}
+
 void ReadSpawnListFromINI()
 {
-	if(GetCharInfo()->zoneId > MAX_ZONES)
+	if(!pLocalPC || pLocalPC->zoneId > MAX_ZONES)
 		return;
-	CHAR ZoneName[MAX_STRING];
-	CHAR szTemp[MAX_STRING];
-	CHAR szBuffer[MAX_STRING];
-	CHAR szSound[MAX_STRING];
-	EQWorldData* psWorldData = pWorldData;
 
-	strcpy_s(ZoneName,psWorldData->ZoneArray[GetCharInfo()->zoneId]->LongName);
-	//WriteChatf("\at%s\ax::\am%s", PLUGIN_NAME, ZoneName);
-	int i=0;
-	do {
-		sprintf_s(szTemp,"spawn%d",i);
-		GetPrivateProfileString(ZoneName,szTemp,"notfound",szBuffer,MAX_STRING,INIFileName);
-		if (!strcmp(szBuffer,"notfound"))
-			break;
-		sprintf_s(szTemp,"sound%d",i);
-		GetPrivateProfileString(ZoneName,szTemp,NULL,szSound,MAX_STRING,INIFileName);
-		if (szSound[0] != '\0') {
-			strcat_s(szBuffer, "|");
-			strcat_s(szBuffer, szSound);
+	const std::string sectionName = GetZoneSectionName(pLocalPC->zoneId);
+
+	std::vector iniKeys = GetPrivateProfileKeys(sectionName, INIFileName);
+	for (const auto& iniKey : iniKeys)
+	{
+		int pos = ci_find_substr(iniKey, "Spawn");
+		if (pos != -1)
+		{
+			// advance pos to beyond spawn
+			pos += 5;
+			std::string spawnName = GetPrivateProfileString(sectionName, iniKey, "", INIFileName);
+			if (!spawnName.empty())
+			{
+				std::string soundName = GetPrivateProfileString(sectionName, "Sound" + iniKey.substr(pos), "", INIFileName);
+				AddNameToSearchList(spawnName, soundName);
+			}
 		}
-		AddNameToSearchList(szBuffer);
-	} while (++i);
+	}
 }
 
 void RemoveNameFromSearchList(PCHAR SpawnName)
@@ -217,7 +225,7 @@ template<unsigned int _Size>BOOL IsWatchedSpawn(PSPAWNINFO pSpawn,char(&Sound)[_
 		}
 		else
 		{
-			if (StringCompare(pSpawn->DisplayedName, p)) {
+			if (MaybeExactCompare(pSpawn->DisplayedName, p)) {
 				strcpy_s(Sound, _Size, pSearchStrings->SearchSound);
 				return true;
 			}
@@ -268,25 +276,27 @@ template<unsigned int _Size>VOID AddSpawnToUpList(PSPAWNINFO pSpawn,char(&Sound)
 				peqs->fWaveVolumeLevel = fOrgVol;//better not mess with peoples mastervolume...
 			}
 		}
-		CHAR szProfile[MAX_STRING] = { 0 };
-		sprintf_s(szProfile,"%s.%s", EQADDR_SERVERNAME, pCharData->Name);
-		GetPrivateProfileString(szProfile, "OnSpawnCommand", "notfound", szTemp, MAX_STRING, INIFileName);
-		if(!strcmp(szTemp,"notfound"))
-			return;
-		EzCommand(szTemp);
+
+		if (!gOnSpawnCommand.empty())
+		{
+			EzCommand(gOnSpawnCommand.c_str());
+		}
 
 	}
 }
 
 void WalkSpawnList()
 {
+	// Since we're explicitly calling a walk of the spawns, clear the list
+	SpawnUpList.clear();
+
 	CHAR szSound[MAX_STRING] = {0};
 
-	// Reset the hightlighting, incase weve removed a spawn
+	// Reset the hightlighting, in case we've removed a spawn
 	EzCommand("/squelch /highlight reset");
 
 	// Make fresh list from current spawns.
-	PSPAWNINFO pSpawn=(PSPAWNINFO)pSpawnList;
+	PSPAWNINFO pSpawn= pSpawnList;
 
 	WriteChatf("\at%s\ax::\aoSpawns currently up:",PLUGIN_NAME);
 
@@ -318,7 +328,7 @@ void WalkSpawnList()
 				if (!found)
 					AddSpawnToUpList(pSpawn,szSound);
 			}
-			pSpawn = pSpawn->pNext;
+			pSpawn = pSpawn->GetNext();
 		}
 	}
 }
@@ -378,17 +388,6 @@ void SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
 		WriteChatf("\at%s\ax::\agEnabled",PLUGIN_NAME);
 
 	}
-	else if (!_stricmp(Arg1,"case"))
-	{
-		if(Arg2[0])
-			bUseExactCase=!bUseExactCase;
-		else if(!_strnicmp(Arg2, "on", 2))
-			bUseExactCase=true;
-		else if(!_strnicmp(Arg2, "off", 3))
-			bUseExactCase=false;
-		WritePrivateProfileString(szProfile,"ExactCase",bUseExactCase?"on":"off",INIFileName);
-		WriteChatf("\at%s\ax::\amExactCast=%s",PLUGIN_NAME,bUseExactCase?"\agON":"\ayOFF");
-	}
 	else if (!_stricmp(Arg1,"vol"))
 	{
 		if (Arg2[0]!='\0') {
@@ -401,48 +400,41 @@ void SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
 	}
 	else if (!_stricmp(Arg1,"add"))
 	{
-		if (strlen(Arg2))
+		if (Arg2[0] == '\0' && pTarget)
 		{
-			AddNameToSearchList(Arg2);
+			strcpy_s(Arg2, pTarget->DisplayedName);
+		}
+
+		if (Arg2[0] == '\0')
+		{
+			WriteChatf("\at%s\ax::\ayYou must have a target or specify a spawn!",PLUGIN_NAME);
 		}
 		else
 		{
-			if(pTarget)
-			{
-				PSPAWNINFO psTarget = (PSPAWNINFO)pTarget;
-				sprintf_s(szTemp,"#%s",psTarget->DisplayedName);
-				AddNameToSearchList(szTemp);
-			}
-			else
-			{
-				WriteChatf("\at%s\ax::\ayYou must have a target or specify a spawn!",PLUGIN_NAME);
-				return;
-			}
+			if (AddNameToSearchList(Arg2))
+				AddSpawnToINI(Arg2);
+			if (bSpawnMasterOn)
+				WalkSpawnList();
 		}
-		WriteINI();
-		if (bSpawnMasterOn) WalkSpawnList();
 	}
 	else if (!_stricmp(Arg1,"delete"))
 	{
-		if (strlen(Arg2))
+		if (Arg2[0] == '\0' && pTarget)
 		{
-			RemoveNameFromSearchList(Arg2);
+			strcpy_s(Arg2, pTarget->DisplayedName);
+		}
+
+		if (Arg2[0] == '\0')
+		{
+			WriteChatf("\at%s\ax::\ayYou must have a target or specify a spawn!",PLUGIN_NAME);
 		}
 		else
 		{
-			if(pTarget)
-			{
-				PSPAWNINFO psTarget = (PSPAWNINFO)pTarget;
-				sprintf_s(szTemp,"#%s",psTarget->DisplayedName);
-				RemoveNameFromSearchList(szTemp);
-			}
-			else
-			{
-				WriteChatf("\at%s\ax::\ayYou must have a target or specify a spawn!",PLUGIN_NAME);
-				return;
-			}
+			RemoveNameFromSearchList(Arg2);
+			RemoveSpawnFromINI(Arg2);
+			if (bSpawnMasterOn)
+				WalkSpawnList();
 		}
-		WriteINI();
 	}
 	else if (!_stricmp(Arg1,"list"))
 	{
@@ -602,9 +594,36 @@ bool dataSpawnMaster(const char* szName, MQTypeVar& Dest)
 	return true;
 }
 
+void InitSettings()
+{
+	if (!pLocalPC)
+		return;
+
+	const std::string iniSection = fmt::format("{}.{}", EQADDR_SERVERNAME, pLocalPC->Name);
+
+	// Set the defaults
+	gOnSpawnCommand = GetPrivateProfileString("Settings", "OnSpawnCommand", "", INIFileName);
+	bSpawnMasterOn = GetPrivateProfileBool("Settings", "Enabled", true, INIFileName);
+	fMasterVolume = GetPrivateProfileFloat("Settings", "MasterVolume", 1.0, INIFileName);
+
+	// Get the character specific overrides
+	gOnSpawnCommand = GetPrivateProfileString(iniSection, "OnSpawnCommand", gOnSpawnCommand, INIFileName);
+	bSpawnMasterOn = GetPrivateProfileBool(iniSection, "Enabled", bSpawnMasterOn, INIFileName);
+	fMasterVolume = GetPrivateProfileFloat(iniSection, "MasterVolume", 1.0, INIFileName);
+}
+
+PLUGIN_API void SetGameState(int GameState)
+{
+	static std::string LastCharacter;
+	if (GameState == GAMESTATE_INGAME && LastCharacter != pLocalPC->Name)
+	{
+		InitSettings();
+		LastCharacter = pLocalPC->Name;
+	}
+}
+
 PLUGIN_API void InitializePlugin()
 {
-	char szTemp[MAX_STRING] = { 0 };
 	AddCommand("/spawnmaster", SpawnMasterCmd);
 	AddMQ2Data("SpawnMaster", dataSpawnMaster);
 	pSpawnMasterType = new MQ2SpawnMasterType;
@@ -615,35 +634,8 @@ PLUGIN_API void InitializePlugin()
 		SpawnDownList.clear();
 		SearchStrings.clear();
 		ReadSpawnListFromINI();
-		CHAR szProfile[MAX_STRING] = { 0 };
-		sprintf_s(szProfile, "%s.%s", EQADDR_SERVERNAME, ((PCHARINFO)pCharData)->Name);
-		GetPrivateProfileString(szProfile, "MasterVolume", "1.0", szTemp, MAX_STRING, INIFileName);
-		fMasterVolume = GetFloatFromString(szTemp, fMasterVolume);
-		// Check for the INI Entry OnSpawnCommand to exist in [Server.CharName] and write a default value if not.
-		GetPrivateProfileString(szProfile, "OnSpawnCommand", "notfound", szTemp, MAX_STRING, INIFileName);
-		if (!strcmp(szTemp, "notfound"))
-		WritePrivateProfileString(szProfile, "OnSpawnCommand", "", INIFileName);
-
-		// Check for the INI Entry Enabled to exist in [Server.CharName] and write a default value if not.
-		GetPrivateProfileString(szProfile, "Enabled", "notfound", szTemp, MAX_STRING, INIFileName);
-		if (!strcmp(szTemp, "notfound"))
-		{
-			WritePrivateProfileString(szProfile, "Enabled", "on", INIFileName);
-			GetPrivateProfileString(szProfile, "Enabled", "on", szTemp, MAX_STRING, INIFileName);
-		}
-		if (!_stricmp(szTemp, "on"))
-			bSpawnMasterOn = true;
-		else
-			bSpawnMasterOn = false;
-
-		GetPrivateProfileString(szProfile, "ExactCase", "off", szTemp, MAX_STRING, INIFileName);
-		if (!_stricmp(szTemp, "on"))
-			bUseExactCase = true;
-		else
-			bUseExactCase = false;
 	}
 }
-
 
 PLUGIN_API void ShutdownPlugin()
 {
@@ -696,7 +688,7 @@ PLUGIN_API void OnRemoveSpawn(PSPAWNINFO pSpawn)
 	}
 }
 
-PLUGIN_API VOID OnPulse()
+PLUGIN_API void OnPulse()
 {
 	static int pulse_counter = 0;
 	if (++pulse_counter<=SKIP_PULSES || gGameState != GAMESTATE_INGAME || !bSpawnMasterOn)
@@ -717,12 +709,12 @@ PLUGIN_API VOID OnPulse()
 	}
 }
 
-PLUGIN_API VOID OnBeginZone()
+PLUGIN_API void OnBeginZone()
 {
 	bSpawnMasterOn = false;
 }
 
-PLUGIN_API VOID OnEndZone()
+PLUGIN_API void OnEndZone()
 {
 	char szTemp[MAX_STRING];
 	SpawnUpList.clear();
@@ -738,9 +730,4 @@ PLUGIN_API VOID OnEndZone()
 		WalkSpawnList();
 	}
 	else bSpawnMasterOn = false;
-	GetPrivateProfileString(szProfile,"ExactCase","off",szTemp,MAX_STRING,INIFileName);
-	if (!_stricmp(szTemp,"on"))
-		bUseExactCase = true;
-	else
-		bUseExactCase = false;
 }
