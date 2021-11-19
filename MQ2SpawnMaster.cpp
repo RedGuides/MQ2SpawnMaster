@@ -41,6 +41,8 @@ constexpr auto SKIP_PULSES = 10;
 float fMasterVolume = 1.0;
 bool bMasterVolumeSet = false;
 
+bool AlwaysShowOnMap = true;
+
 std::string gOnSpawnCommand = "";
 
 struct _SEARCH_STRINGS {
@@ -264,6 +266,11 @@ template<unsigned int _Size>VOID AddSpawnToUpList(PSPAWNINFO pSpawn,char(&Sound)
 		WriteChatf("\at%s\ax::\aySPAWN\am[%s] (%d) %s (%1.2f %s, %1.2fZ)", PLUGIN_NAME, UpListTemp.SpawnTime, UpListTemp.SpawnID, UpListTemp.Name,
 			GetDistance(GetCharInfo()->pSpawn,pSpawn), szHeadingShort[Angle], pSpawn->Z-GetCharInfo()->pSpawn->Z);
 
+		if (AlwaysShowOnMap)
+		{
+			sprintf_s(szTemp, "/squelch /mapshow \"%s\"", pSpawn->DisplayedName);
+			EzCommand(szTemp);
+		}
 		// Do a /highlight command for the map
 		sprintf_s(szTemp, "/squelch /highlight \"%s\"", pSpawn->DisplayedName);
 		EzCommand(szTemp);
@@ -605,11 +612,13 @@ void InitSettings()
 	gOnSpawnCommand = GetPrivateProfileString("Settings", "OnSpawnCommand", "", INIFileName);
 	bSpawnMasterOn = GetPrivateProfileBool("Settings", "Enabled", true, INIFileName);
 	fMasterVolume = GetPrivateProfileFloat("Settings", "MasterVolume", 1.0, INIFileName);
+	AlwaysShowOnMap = GetPrivateProfileBool("Settings", "AlwaysShowOnMap", true, INIFileName);
 
 	// Get the character specific overrides
 	gOnSpawnCommand = GetPrivateProfileString(iniSection, "OnSpawnCommand", gOnSpawnCommand, INIFileName);
 	bSpawnMasterOn = GetPrivateProfileBool(iniSection, "Enabled", bSpawnMasterOn, INIFileName);
-	fMasterVolume = GetPrivateProfileFloat(iniSection, "MasterVolume", 1.0, INIFileName);
+	fMasterVolume = GetPrivateProfileFloat(iniSection, "MasterVolume", fMasterVolume, INIFileName);
+	AlwaysShowOnMap = GetPrivateProfileBool(iniSection, "AlwaysShowOnMap", AlwaysShowOnMap, INIFileName);
 }
 
 PLUGIN_API void SetGameState(int GameState)
