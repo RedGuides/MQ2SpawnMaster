@@ -32,7 +32,7 @@
 #include <list>
 
 constexpr auto PLUGIN_NAME = "MQ2SpawnMaster";
-PLUGIN_VERSION(11.4);
+PLUGIN_VERSION(11.5);
 
 PreSetup(PLUGIN_NAME);
 
