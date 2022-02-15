@@ -552,15 +552,15 @@ public:
 		switch((SpawnMasterMembers)pMember->ID)
 		{
 		case Search:
-			Dest.Int=SearchStrings.size();
+			Dest.Int = (int)SearchStrings.size();
 			Dest.Type=mq::datatypes::pIntType;
 			return true;
 		case UpList:
-			Dest.Int=SpawnUpList.size();
+			Dest.Int = (int)SpawnUpList.size();
 			Dest.Type=mq::datatypes::pIntType;
 			return true;
 		case DownList:
-			Dest.Int=SpawnDownList.size();
+			Dest.Int = (int)SpawnDownList.size();
 			Dest.Type=mq::datatypes::pIntType;
 			return true;
 		case Version:
