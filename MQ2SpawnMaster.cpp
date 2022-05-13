@@ -381,7 +381,7 @@ void SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
 	GetArg(Arg1,szLine,1);
 	GetArg(Arg2,szLine,2);
 	CHAR szProfile[MAX_STRING] = { 0 };
-	sprintf_s(szProfile,"%s.%s", EQADDR_SERVERNAME, pCharData->Name);
+	sprintf_s(szProfile,"%s.%s", GetServerShortName(), pLocalPC->Name);
 	if (!_stricmp(Arg1,"off"))
 	{
 		bSpawnMasterOn = false;
@@ -606,7 +606,7 @@ void InitSettings()
 	if (!pLocalPC)
 		return;
 
-	const std::string iniSection = fmt::format("{}.{}", EQADDR_SERVERNAME, pLocalPC->Name);
+	const std::string iniSection = fmt::format("{}.{}", GetServerShortName(), pLocalPC->Name);
 
 	// Set the defaults
 	gOnSpawnCommand = GetPrivateProfileString("Settings", "OnSpawnCommand", "", INIFileName);
@@ -710,7 +710,7 @@ PLUGIN_API void OnPulse()
 		if (gGameState == GAMESTATE_INGAME) {
 			CHAR szTemp[MAX_STRING] = { 0 };
 			CHAR szProfile[MAX_STRING] = { 0 };
-			sprintf_s(szProfile,"%s.%s",EQADDR_SERVERNAME,((PCHARINFO)pCharData)->Name);
+			sprintf_s(szProfile,"%s.%s", GetServerShortName(), pLocalPC->Name);
 			GetPrivateProfileString(szProfile,"MasterVolume","1.0",szTemp,MAX_STRING,INIFileName);
 			fMasterVolume = GetFloatFromString(szTemp, fMasterVolume);
 			bMasterVolumeSet = true;
@@ -731,7 +731,7 @@ PLUGIN_API void OnEndZone()
 	SearchStrings.clear();
 	ReadSpawnListFromINI();
 	CHAR szProfile[MAX_STRING] = { 0 };
-	sprintf_s(szProfile,"%s.%s",EQADDR_SERVERNAME,((PCHARINFO)pCharData)->Name);
+	sprintf_s(szProfile,"%s.%s", GetServerShortName(), pLocalPC->Name);
 	GetPrivateProfileString(szProfile,"Enabled","on",szTemp,MAX_STRING,INIFileName);
 	if (!_stricmp(szTemp,"on"))
 	{
