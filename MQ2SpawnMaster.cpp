@@ -209,7 +209,7 @@ template <unsigned int _Size>VOID GetLocalTimeHHMMSS(CHAR(&SysTime)[_Size])
 }
 
 // TODO:  Why is Sound required to determine if something is a watched spawn?
-template<unsigned int _Size>BOOL IsWatchedSpawn(PSPAWNINFO pSpawn,char(&Sound)[_Size])
+bool IsWatchedSpawn(PSPAWNINFO pSpawn, char* Sound, size_t size)
 {
 	if (pSpawn->Type==SPAWN_CORPSE)
 		return false;
@@ -221,18 +221,18 @@ template<unsigned int _Size>BOOL IsWatchedSpawn(PSPAWNINFO pSpawn,char(&Sound)[_
 		{
 			p++; // skip over the #
 			if (!strcmp(pSpawn->DisplayedName, p)) {
-				strcpy_s(Sound, _Size, pSearchStrings->SearchSound);
+				strcpy_s(Sound, size, pSearchStrings->SearchSound);
 				return true;
 			}
 		}
 		else
 		{
 			if (MaybeExactCompare(pSpawn->DisplayedName, p)) {
-				strcpy_s(Sound, _Size, pSearchStrings->SearchSound);
+				strcpy_s(Sound, size, pSearchStrings->SearchSound);
 				return true;
 			}
 		}
-		pSearchStrings++;
+		++pSearchStrings;
 	}
 	return false;
 }
@@ -315,7 +315,7 @@ void WalkSpawnList()
 	{
 		while(pSpawn)
 		{
-			if(IsWatchedSpawn(pSpawn,szSound))
+			if(IsWatchedSpawn(pSpawn, szSound, MAX_STRING))
 			{
 				// Check IDs to see if we're already watching it
 				bool found = false;
@@ -578,7 +578,7 @@ public:
 			if (pTarget == nullptr) return false;
 			Dest.Type=mq::datatypes::pBoolType;
 			// FIXME:  Don't really want to pass a sound here
-			Dest.Int=IsWatchedSpawn(pTarget, DataTypeTemp);
+			Dest.Int=IsWatchedSpawn(pTarget, DataTypeTemp, DataTypeTemp.size());
 			return true;
 		}
 		return false;
@@ -658,7 +658,7 @@ PLUGIN_API void OnAddSpawn(PSPAWNINFO pSpawn)
 	if (!bSpawnMasterOn || gGameState != GAMESTATE_INGAME || !pSpawn->SpawnID)
 		return;
 	CHAR szSound[MAX_STRING] = { 0 };
-	if (IsWatchedSpawn(pSpawn, szSound)) {
+	if (IsWatchedSpawn(pSpawn, szSound, MAX_STRING)) {
 		AddSpawnToUpList(pSpawn,szSound);
 	}
 }
@@ -670,7 +670,7 @@ PLUGIN_API void OnRemoveSpawn(PSPAWNINFO pSpawn)
 	CHAR szMsg[MAX_STRING] = {0};
 	CHAR szSound[MAX_STRING] = {0};
 
-	if (IsWatchedSpawn(pSpawn,szSound))
+	if (IsWatchedSpawn(pSpawn, szSound, MAX_STRING))
 	{
 		std::list<SPAWN_DATA>::iterator pSpawnUpList = SpawnUpList.begin();
 		while (pSpawnUpList!=SpawnUpList.end())
