@@ -531,7 +531,8 @@ public:
 		DownList,
 		Version,
 		LastMatch,
-		HasTarget
+		HasTarget,
+		HasSpawn
 	};
 
 	MQ2SpawnMasterType():MQ2Type("SpawnMaster")
@@ -542,6 +543,7 @@ public:
 		TypeMember(Version);
 		TypeMember(LastMatch);
 		TypeMember(HasTarget);
+		TypeMember(HasSpawn);
 	}
 
 	virtual bool GetMember(MQVarPtr VarPtr, const char* Member, char* Index, MQTypeVar& Dest) override
@@ -580,6 +582,30 @@ public:
 			// FIXME:  Don't really want to pass a sound here
 			Dest.Int=IsWatchedSpawn(pTarget, DataTypeTemp, DataTypeTemp.size());
 			return true;
+		case HasSpawn:
+		{
+			Dest.Type = mq::datatypes::pBoolType;
+			if (SpawnUpList.empty() || Index[0] == '\0')
+				return false;
+
+			PlayerClient* search_spawn = nullptr;
+			const int spawn_id = GetIntFromString(Index, 0);
+			if (spawn_id < 1)
+			{
+				search_spawn = GetSpawnByName(Index);
+			}
+			else
+			{
+				search_spawn = GetSpawnByID(spawn_id);
+			}
+
+			if (search_spawn == nullptr)
+				return false;
+			// FIXME: Also don't want to pass a sound here
+			Dest.Set(IsWatchedSpawn(search_spawn, DataTypeTemp, DataTypeTemp.size()));
+			return true;
+		}
+
 		}
 		return false;
 	}
