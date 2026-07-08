@@ -264,7 +264,7 @@ template<unsigned int _Size>VOID AddSpawnToUpList(PSPAWNINFO pSpawn,char(&Sound)
 
 		INT Angle = (INT)((atan2f(GetCharInfo()->pSpawn->X - pSpawn->X, GetCharInfo()->pSpawn->Y - pSpawn->Y) * 180.0f / PI + 360.0f) / 22.5f + 0.5f) % 16;
 		WriteChatf("\at%s\ax::\aySPAWN\am[%s] (%d) %s (%1.2f %s, %1.2fZ)", PLUGIN_NAME, UpListTemp.SpawnTime, UpListTemp.SpawnID, UpListTemp.Name,
-			GetDistance(GetCharInfo()->pSpawn,pSpawn), szHeadingShort[Angle], pSpawn->Z-GetCharInfo()->pSpawn->Z);
+			GetDistance2D(GetCharInfo()->pSpawn,pSpawn), szHeadingShort[Angle], pSpawn->Z-GetCharInfo()->pSpawn->Z);
 
 		if (AlwaysShowOnMap)
 		{
@@ -472,7 +472,7 @@ void SpawnMasterCmd(PSPAWNINFO pChar, PCHAR szLine)
 			if(PSPAWNINFO pSpawn = (PSPAWNINFO)GetSpawnByID(pSpawnUpList->SpawnID)) {
 				sprintf_s(szMsg,"\ay*\ax[%s] (%d) %s ", pSpawnUpList->SpawnTime, pSpawnUpList->SpawnID, pSpawnUpList->Name);
 				INT Angle = (INT)((atan2f(GetCharInfo()->pSpawn->X - pSpawn->X, GetCharInfo()->pSpawn->Y - pSpawn->Y) * 180.0f / PI + 360.0f) / 22.5f + 0.5f) % 16;
-				sprintf_s(szTemp,"(%1.2f %s, %1.2fZ)", GetDistance(GetCharInfo()->pSpawn,pSpawn), szHeadingShort[Angle], pSpawn->Z-GetCharInfo()->pSpawn->Z);
+				sprintf_s(szTemp,"(%1.2f %s, %1.2fZ)", GetDistance2D(GetCharInfo()->pSpawn,pSpawn), szHeadingShort[Angle], pSpawn->Z-GetCharInfo()->pSpawn->Z);
 				strcat_s(szMsg,szTemp);
 				WriteChatColor(szMsg,USERCOLOR_WHO);
 			}
